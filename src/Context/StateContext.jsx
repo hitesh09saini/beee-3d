@@ -1,4 +1,4 @@
-import { createContext, useState, useContext, useRef } from 'react';
+import { createContext, useState, useContext, useRef, useEffect } from 'react';
 import buzzing from "/buzzing.mp3";
 // Create the context
 const PositionContext = createContext();
@@ -8,7 +8,8 @@ export const PositionProvider = ({ children }) => {
   const [loader, setLoader] = useState(true); // Default camera position or modal position
   const buzz = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
-
+  const [complete, setComplete] = useState(true);
+  const [progress, setProgress] = useState(0);
 
   const click = () => {
     handlePlay();
@@ -21,6 +22,36 @@ export const PositionProvider = ({ children }) => {
     });
   }
 
+  useEffect(() => {
+    const handleProgress = () => {
+      setProgress(100);
+      setComplete(false);
+    };
+
+    // Simulate loading progress (you can replace this with actual loading logic)
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return prev + 10; // Increase progress
+      });
+    }, 300); // Adjust timing as necessary
+
+    // Event listener for when the window finishes loading
+    window.addEventListener('load', handleProgress);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('load', handleProgress);
+    };
+  }, []);
+
+
+
+
+
 
   const handlePlay = async () => {
     if (buzz.current && !isPlaying) {
@@ -28,14 +59,14 @@ export const PositionProvider = ({ children }) => {
         buzz.current.volume = 0; // Set initial volume to 0
         await buzz.current.play();
         setIsPlaying(true);
-  
+
         const targetVolume = 1; // Desired maximum volume
         const increment = 0.01; // Amount to increase volume each step
         const duration = 2000; // Duration in milliseconds
         const intervalTime = 100; // Interval time in milliseconds
         const steps = duration / intervalTime; // Number of steps
         let currentStep = 0;
-  
+
         const volumeInterval = setInterval(() => {
           if (currentStep < steps) {
             buzz.current.volume = Math.min(buzz.current.volume + increment, targetVolume);
@@ -44,21 +75,31 @@ export const PositionProvider = ({ children }) => {
             clearInterval(volumeInterval); // Stop increasing volume when target reached
           }
         }, intervalTime);
-        
+
       } catch (error) {
         console.error("Audio play failed:", error);
       }
     }
   };
-  
+
   return (
     <PositionContext.Provider value={{ loader, setLoader }}>
       {children}
       {loader && <div style={{ zIndex: 9999 }} className="loader flex justify-center items-center fixed top-0 left-0 h-screen
        w-screen bg-yellow-500">
-        <div onClick={click} className='text-4xl hover:text-[#2f5218] font-bold cursor-pointer'>
-          Enter the World of Bees.<span className='animate-ping'>.</span><span className='animate-ping'>.</span>
-        </div>
+
+        {
+          complete ? (
+            <div onClick={click} className='text-4xl  font-bold cursor-pointer'>
+              {progress}
+            </div>
+          ) : (
+            <div onClick={click} className='text-4xl hover:text-[#2f5218] font-bold cursor-pointer'>
+              Enter the World of Bees.<span className='animate-ping'>.</span><span className='animate-ping'>.</span>
+            </div>
+          )
+
+        }
       </div>}
       <audio ref={buzz} src={buzzing} loop />
 
